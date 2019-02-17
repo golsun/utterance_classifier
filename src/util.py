@@ -21,6 +21,8 @@ def makedirs(fld):
 
 
 def line_generator(path, i_max=None):
+	if not os.path.exists(path):
+		return None
 	f = open(path, 'r', encoding='utf-8', errors='ignore')
 	for line in f:
 		yield line.strip('\n')

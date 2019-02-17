@@ -305,9 +305,8 @@ def post(fld):
 
 
 
-def cal_score(classifier, fld, fname):
-	path_in = fld + '/' + fname
-	path_out = fld + '/scored_' + fname
+def cal_score(classifier, path_in):
+	path_out = path_in + '.scored'
 	print('scoring '+path_in)
 	batch_size = 100
 	open(path_out, 'w')
@@ -321,7 +320,6 @@ def cal_score(classifier, fld, fname):
 		data_src = np.zeros((batch_size, classifier.dataset.max_seq_len[0]))
 		data_tgt = np.zeros((batch_size, classifier.dataset.max_seq_len[1]))
 		return data_src, data_tgt
-
 
 	j = 0
 	data_src, data_tgt = get_tensor()
@@ -380,18 +378,23 @@ if __name__ == '__main__':
 
 
 	parser = argparse.ArgumentParser()
-	parser.add_argument('mode')
+	parser.add_argument('--mode', default='score')
 	parser.add_argument('--encoder_depth', type=int, default=2)
 	parser.add_argument('--rnn_units', type=int, default=32)
 	parser.add_argument('--mlp_depth', type=int, default=2)
 	parser.add_argument('--mlp_units', type=int, default=32)
-	parser.add_argument('--data_name', default='/classifier/mixed')
+	parser.add_argument('--data_name', default='/classifier/mixed')		# for training
+	parser.add_argument('--score_path', default='D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/train.txt.2turns')
 	args = parser.parse_args()
 
-	dataset = Dataset(fld_data + args.data_name)
+	fld = 'models/en(%i, %i), mlp(%i, %i)'%(args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units)
+	
+	if args.mode == 'score':
+		fld_vocab = fld
+	else:
+		fld_vocab = fld_data + args.data_name
+	dataset = Dataset(fld_vocab)
 
-
-	fld = 'out/en(%i, %i), mlp(%i, %i)'%(args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units)
 	classifier = Classifier(fld, dataset, args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units)
 	classifier.build_model()
 	if args.mode != 'train':
@@ -407,9 +410,7 @@ if __name__ == '__main__':
 	elif args.mode == 'post':
 		post(fld + '/post')
 	elif args.mode == 'score':
-		fld = 'D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/'
-		fname = 'train.txt.2turns'
-		cal_score(classifier, fld, fname)
+		cal_score(classifier, arg.score_path)
 
 
 
