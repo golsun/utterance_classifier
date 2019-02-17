@@ -387,7 +387,7 @@ if __name__ == '__main__':
 	parser.add_argument('--score_path', default='D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/train.txt.2turns')
 	args = parser.parse_args()
 
-	fld = 'models/en(%i, %i), mlp(%i, %i)'%(args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units)
+	fld = 'models/en(%i,%i),mlp(%i,%i)'%(args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units)
 	
 	if args.mode == 'score':
 		fld_vocab = fld
