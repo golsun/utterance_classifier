@@ -28,4 +28,4 @@ Steps
 ## Model
 This classifier is trained using shuffled 5M Twitter and 5M Reddit 2-turn conversations. Accuracy on balanced testing dataset is ~90%. The model architecture is shown in the figure below. Context and response are converted to fixed-length vector separately by stacked GRU, then the context and response vectors are concatenated and passed through MLP to produce the final score.
 
-![Model](models/en(2, 32), mlp(2, 32)/model.jpg)
+![](models/en(2,32),mlp(2,32)/model.png)
