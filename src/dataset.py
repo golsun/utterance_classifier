@@ -75,3 +75,76 @@ class Dataset:
 
 		return data_src[:i, :], data_tgt[:i, :], np.asarray(labels)
 
+
+
+def build_mixed_dataset(path_scored, tlike_score, prob_rand, n_tlike, n_rand):
+
+	path_out = path_scored + '.picked'
+	w_score = 0.1
+	update_rate = 0.1
+
+	m_tlike = 0
+	m_rand = 0
+	lines = []
+	sum_score_tlike = 0.
+	sum_score_rand = 0.
+
+	for sub in ['vali', 'test', 'train']:
+		open(path_out + '.' + sub, 'w')
+	
+	for line in open(path_scored, encoding='utf-8'):
+		src, tgt, score = line.strip('\n').split('\t')
+		line = src + '\t' + tgt
+		score = float(score)
+
+		if m_rand < n_rand and np.random.random() < prob_rand:
+			lines.append(line)
+			m_rand += 1
+			sum_score_rand += score
+		elif score >= tlike_score:
+			lines.append(line)
+			m_tlike += 1
+			sum_score_tlike += score
+		else:
+			continue
+
+		m = (m_tlike + m_rand)
+		if len(lines) == 5000:
+			if m == 5000:
+				sub = 'vali'
+			elif m == 10000:
+				sub = 'test'
+			else:
+				sub = 'train'
+
+			with open(path_out + '.' + sub, 'a', encoding='utf-8') as f:
+				f.write('\n'.join(lines) + '\n')
+			lines = []
+
+			if sub != 'train' or m % 1e5 == 0:
+				print('wrote to %s, picked %.3f M, t-like/total = %.2f, avg_score = %.2f/%.2f'%(
+					sub,
+					m/1e6,
+					m_tlike/m,
+					sum_score_tlike/m_tlike,
+					sum_score_rand/m_rand
+					))
+
+	with open(path_out + '.train', 'a', encoding='utf-8') as f:
+		f.write('\n'.join(lines))
+	m = (m_tlike + m_rand)
+	print('finally, picked %.3f M, t-like/total = %.2f, avg_score = %.2f/%.2f=>%.2f'%(
+		m/1e6,
+		m_tlike/m,
+		sum_score_tlike/m_tlike,
+		sum_score_rand/m_rand,
+		(sum_score_rand + sum_score_tlike)/(m_tlike + m_rand),
+		))	
+
+
+if __name__ == "__main__":
+	path_scored = 'D:/data/reddit/scored36M/scored.tsv'
+	tlike_score = 0.37
+	prob_rand = 5./36.2
+	build_mixed_dataset(path_scored, tlike_score, prob_rand, 5e6, 5e6)
+
