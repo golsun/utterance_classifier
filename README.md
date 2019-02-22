@@ -5,7 +5,7 @@ This repo provides the code to extract "dialogs" from Reddit data, and score the
 As we don't own the Reddit data, we only provide the script here to process the data.
 
 Steps:
-* Download the raw data from a [third part](http://files.pushshift.io/reddit/comments/). The file names are in format `<YYYY-MM>`.
+* Download the raw data from a [third party](http://files.pushshift.io/reddit/comments/). The file names are in format `<YYYY-MM>`.
 * Extract valid submissions (i.e. the "main" post) and their valid comments by `python reddit.py <YYYY-MM> --task=extract`
 * Extract valid dialogs from these Reddit posts by `python reddit.py <YYYY-MM> --task=conv`
 
