@@ -27,8 +27,11 @@ class LossHistory(Callback):
 
 class Classifier():
 
-	def __init__(self, fld, dataset, encoder_depth, rnn_units, mlp_depth, mlp_units, lr=1e-4, dropout=0.):
-		self.prefix = ['src','tgt']
+	def __init__(self, fld, dataset, encoder_depth, rnn_units, mlp_depth, mlp_units, tgt_only=False, lr=1e-4, dropout=0.):
+		if tgt_only:
+			self.prefix = ['tgt']
+		else:
+			self.prefix = ['src','tgt']
 		self.history = LossHistory()
 
 		self.fld = fld
@@ -44,7 +47,7 @@ class Classifier():
 		self.log_train = self.fld + '/train'
 
 		self.dataset.reset('test')
-		self.vali_data = self.dataset.load_data('test', max_n=2000)
+		self.vali_data = self.load_data('vali', 2000)
 		self.dataset.reset('test')
 
 
@@ -120,7 +123,6 @@ class Classifier():
 			out = layers['mlp_%i'%i](out)
 
 		self.model = Model(inp, out)
-
 		self.model.compile(optimizer=Adam(lr=self.lr), loss='binary_crossentropy')
 		if PLOT:
 			plot_model(self.model, self.fld + '/model.png',	show_shapes=True)
@@ -165,9 +167,9 @@ class Classifier():
 
 	def test(self):
 		print('testing...')
-		data_src, data_tgt, labels = self.dataset.load_data('test', max_n=10000)
-		loss_vali = self.model.evaluate([data_src, data_tgt], labels, verbose=0)
-		labels_pred = self.model.predict([data_src, data_tgt], verbose=0).ravel()
+		inp, labels = self.load_data('test', 10000)
+		loss_vali = self.model.evaluate(inp, labels, verbose=0)
+		labels_pred = self.model.predict(inp, verbose=0).ravel()
 		acc = sum(labels == 1.*(labels_pred > 0.5))/len(labels)
 		print('loss = %.2f, accuracy = %.2f'%(loss_vali, acc))
 
@@ -217,12 +219,21 @@ class Classifier():
 			print('--- score ---\n%.4f'%(self.model.predict([data_src, data_tgt], verbose=0)))
 
 
+	def load_data(self, sub, size):
+		data = self.dataset.load_data(sub, size, prefix=self.prefix)
+		if len(self.prefix) == 1:
+			data_tgt, labels = data
+			inp = data_tgt
+		else:
+			data_src, data_tgt, labels = data
+			inp = [data_src, data_tgt]
+		return inp, labels
 
 
 
 	def train_a_load(self, batch_size, batch_per_load):
-		data_src, data_tgt, labels = self.dataset.load_data('train', batch_size * batch_per_load)
-		m = data_src.shape[0]
+		inp, labels = self.load_data('train', batch_size * batch_per_load)
+		m = len(labels)
 		if m == 0:
 			return 0
 		
@@ -232,7 +243,7 @@ class Classifier():
 		write_log(self.log_train + '.log', s)
 
 		self.model.fit(
-			[data_src, data_tgt], 
+			inp, 
 			labels,
 			batch_size=batch_size,
 			callbacks=[self.history])
@@ -242,9 +253,9 @@ class Classifier():
 
 		# vali --------------------
 
-		data_src, data_tgt, labels = self.vali_data
-		loss_vali = self.model.evaluate([data_src, data_tgt], labels, verbose=0)
-		labels_pred = self.model.predict([data_src, data_tgt], verbose=0)
+		inp, labels = self.vali_data
+		loss_vali = self.model.evaluate(inp, labels, verbose=0)
+		labels_pred = self.model.predict(inp, verbose=0)
 		acc = sum(labels.ravel() == 1.*(labels_pred.ravel() > 0.5))/len(labels)
 
 		ss = [
@@ -378,26 +389,28 @@ def cal_score(classifier, path_in):
 
 if __name__ == '__main__':
 
-
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--mode', default='score')
 	parser.add_argument('--encoder_depth', type=int, default=2)
 	parser.add_argument('--rnn_units', type=int, default=32)
 	parser.add_argument('--mlp_depth', type=int, default=2)
 	parser.add_argument('--mlp_units', type=int, default=32)
-	parser.add_argument('--data_name', default='/classifier/mixed')		# for training
+	parser.add_argument('--tgt_only', action='store_true')
+	parser.add_argument('--data_name', default='classifier/mixed')		# for training
 	parser.add_argument('--score_path', default='D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/train.txt.2turns')
 	args = parser.parse_args()
 
-	fld = 'models/en(%i,%i),mlp(%i,%i)'%(args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units)
+	fld = 'out/en(%i,%i),mlp(%i,%i),tgt_only%i'%(
+		args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units, args.tgt_only)
 	
 	if args.mode == 'score':
 		fld_vocab = fld
 	else:
-		fld_vocab = fld_data + args.data_name
+		fld_vocab = fld_data + '/' + args.data_name
 	dataset = Dataset(fld_vocab)
 
-	classifier = Classifier(fld, dataset, args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units)
+	classifier = Classifier(fld, dataset, 
+		args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units, tgt_only=args.tgt_only)
 	classifier.build_model()
 	if args.mode != 'train':
 		classifier.load_weights()

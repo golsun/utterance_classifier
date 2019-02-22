@@ -9,6 +9,7 @@ class Dataset:
 
 		self.path_vocab = os.path.join(fld_data, 'vocab.txt')
 		self.path_train = os.path.join(fld_data, 'train.num')
+		self.path_vali = os.path.join(fld_data, 'vali.num')
 		self.path_test = os.path.join(fld_data, 'test.num')
 
 		# load token dictionary
@@ -23,12 +24,14 @@ class Dataset:
 		# load source-target pairs, tokenized
 		
 		self.reset('train')
+		self.reset('vali')
 		self.reset('test')
 
 
 	def reset(self, task):
 		self.generator = {
 			'train': line_generator(self.path_train),
+			'vali': line_generator(self.path_vali),
 			'test': line_generator(self.path_test),
 			}
 
@@ -88,7 +91,7 @@ class Dataset:
 
 
 
-def mix_shuffle(path_T, path_F, path_out, n=2e6, repeat=False):
+def mix_shuffle(path_T, path_F, path_out, n=2e6, repeat=False, tgt_only=False):
 	# mix data with label 1 (True, path_T) and label 0 (False, path_F)
 	import numpy as np
 	m_vali_test = 1000
@@ -112,7 +115,10 @@ def mix_shuffle(path_T, path_F, path_out, n=2e6, repeat=False):
 			else:
 				break
 		m[label] += 1
-		lines.append(line.strip('\n') + '\t%i'%label)
+		line = line.strip('\n')
+		if tgt_only:
+			line = line.split('\t')[-1]
+		lines.append(line + '\t%i'%label)
 
 		sum_m = sum(m)
 		if sum_m % m_vali_test == 0:
@@ -133,6 +139,42 @@ def mix_shuffle(path_T, path_F, path_out, n=2e6, repeat=False):
 	with open(path_out+'.train','a',encoding='utf-8') as f:
 		f.write('\n'.join(lines))
 		
+
+def txt2num(path_txt, path_vocab, tgt_only):
+	path_out = path_txt + '.num'
+	token2ix = dict()
+	for i, line in enumerate(open(path_vocab, encoding='utf-8')):
+		token2ix[line.strip('\n')] = i+1
+	ix_unk = token2ix['_UNK_']
+	
+	open(path_out, 'w')
+	lines = []
+	n = 0
+	for line in open(path_txt, encoding='utf-8'):
+		ss = line.strip('\n').split('\t')
+		if tgt_only:
+			tgt, label = ss
+		else:
+			src, tgt, label = ss
+			src_num = ' '.join([str(token2ix.get(w, ix_unk)) for w in src.split()])
+		tgt_num = ' '.join([str(token2ix.get(w, ix_unk)) for w in tgt.split()])
+		if tgt_only:
+			lines.append(tgt_num + '\t' + label)
+		else:
+			lines.append(src_num + '\t' + tgt_num + '\t' + label)
+		n += 1
+		
+		if len(lines) % 1e5 == 0:
+			print('processed %.1f M lines'%(n/1e6))
+			with open(path_out, 'a', encoding='utf-8') as f:
+				f.write('\n'.join(lines) + '\n')
+			lines = []
+	
+	print('processed %.1f M lines'%(n/1e6))
+	with open(path_out, 'a', encoding='utf-8') as f:
+		f.write('\n'.join(lines))
+	
+
 
 def build_mixed_dataset(path_scored, tlike_score, prob_rand, n_tlike, n_rand):
 	# given a scored txt file, output mixture of half high-score and half rand-sampled
@@ -205,7 +247,14 @@ if __name__ == "__main__":
 	prob_rand = 5./36.2
 	build_mixed_dataset(path_scored, tlike_score, prob_rand, 5e6, 5e6)
 	"""
+	
 	path_T = 'D:/data/fuse/Holmes/combined.txt'
 	path_F = 'D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/filtered/train.txt'
 	path_out = 'd:/data/fuse/classifier_reddit3f+holmes2/mixed'
-	mix_shuffle(path_T, path_F, path_out, n=1e6, repeat=True)
+	mix_shuffle(path_T, path_F, path_out, n=1e6, repeat=True, tgt_only=True)
+	
+	for sub in ['vali','test','train']:
+		path_txt = path_out + '.' + sub
+		path_vocab = 'd:/data/fuse/reddit3f+holmes2_bb/vocab.txt'
+		txt2num(path_txt, path_vocab, tgt_only=True)
+	
