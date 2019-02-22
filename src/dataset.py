@@ -50,38 +50,49 @@ class Dataset:
 		return seq
 
 
-	def load_data(self, task, max_n):
+	def load_data(self, task, max_n, prefix):
 
-		data_src = np.zeros((max_n, self.max_seq_len[0]))
-		data_tgt = np.zeros((max_n, self.max_seq_len[1]))
+		if 'src' in prefix:
+			data_src = np.zeros((max_n, self.max_seq_len[0]))
+		if 'tgt' in prefix:
+			data_tgt = np.zeros((max_n, self.max_seq_len[1]))
 		labels = []
 		i = 0
 		for line in self.generator[task]:
-			src, tgt, label = line.strip('\n').split('\t')
-			words = src.split()
-			n_words = min(len(words), self.max_seq_len[0])
-			for t, token_index in enumerate(words[-n_words:]):
-				data_src[i, t] = token_index
+			if 'src' in prefix and 'tgt' in prefix:
+				src, tgt, label = line.strip('\n').split('\t')
+			else:
+				tgt, label = line.strip('\n').split('\t')
+			
+			if 'src' in prefix:
+				words = src.split()
+				n_words = min(len(words), self.max_seq_len[0])
+				for t, token_index in enumerate(words[-n_words:]):
+					data_src[i, t] = token_index
 
-			words = tgt.split()
-			n_words = min(len(words), self.max_seq_len[1])
-			for t, token_index in enumerate(words[-n_words:]):
-				data_tgt[i, t] = token_index
+			if 'tgt' in prefix:
+				words = tgt.split()
+				n_words = min(len(words), self.max_seq_len[1])
+				for t, token_index in enumerate(words[-n_words:]):
+					data_tgt[i, t] = token_index
 
 			labels.append(float(label))
 			i += 1
 			if i == max_n:
 				break
 
-		return data_src[:i, :], data_tgt[:i, :], np.asarray(labels)
+		if 'src' in prefix and 'tgt' in prefix: 
+			return data_src[:i, :], data_tgt[:i, :], np.asarray(labels)
+		else:
+			return data_tgt[:i, :], np.asarray(labels)
+
 
 
 
 def build_mixed_dataset(path_scored, tlike_score, prob_rand, n_tlike, n_rand):
+	# given a scored txt file, output mixture of half high-score and half rand-sampled
 
 	path_out = path_scored + '.picked'
-	w_score = 0.1
-	update_rate = 0.1
 
 	m_tlike = 0
 	m_rand = 0

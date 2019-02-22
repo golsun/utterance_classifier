@@ -93,7 +93,7 @@ class Classifier():
 
 
 	def _build_encoder(self, inputs, layers, prefix):
-		encoder_outputs, encoder_states = self._stacked_rnn(
+		_, encoder_states = self._stacked_rnn(
 				[layers['%s_encoder_rnn_%i'%(prefix, i)] for i in range(self.encoder_depth)], 
 				layers['embedding'](inputs))
 		latent = encoder_states[-1]
@@ -109,15 +109,17 @@ class Classifier():
 			encoder_inputs[prefix] = Input(shape=(None,), name=prefix+'_encoder_inputs')
 			latents.append(self._build_encoder(encoder_inputs[prefix], layers, prefix=prefix))
 
-		out = Concatenate()(latents)
+		if len(self.prefix) > 1:
+			out = Concatenate()(latents)
+			inp = [encoder_inputs['src'], encoder_inputs['tgt']]
+		else:
+			out = latents[0]
+			inp = encoder_inputs[self.prefix[0]]
 		out = Dropout(self.dropout)(out)
 		for i in range(self.mlp_depth):
 			out = layers['mlp_%i'%i](out)
 
-		self.model = Model(
-			[encoder_inputs['src'], encoder_inputs['tgt']],
-			out
-			)
+		self.model = Model(inp, out)
 
 		self.model.compile(optimizer=Adam(lr=self.lr), loss='binary_crossentropy')
 		if PLOT:
