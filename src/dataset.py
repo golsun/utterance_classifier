@@ -88,6 +88,51 @@ class Dataset:
 
 
 
+def mix_shuffle(path_T, path_F, path_out, n=2e6, repeat=False):
+	# mix data with label 1 (True, path_T) and label 0 (False, path_F)
+	import numpy as np
+	m_vali_test = 1000
+
+	paths = [path_F, path_T]
+	ff = [open(path, encoding='utf-8') for path in paths]
+	for sub in ['vali','test','train']:
+		open(path_out+'.'+sub, 'w')
+
+	repeats = [0, 0]
+	m = [0, 0]
+	lines = []
+	while sum(m) < n:
+		label = int(np.round(np.random.random()))
+		line = ff[label].readline()
+		if line == '':	# end of file
+			if repeat:
+				ff[label] = open(paths[label], encoding='utf-8')	# read again
+				repeats[label] += 1
+				print('repeat ff[%i]'%label)
+			else:
+				break
+		m[label] += 1
+		lines.append(line.strip('\n') + '\t%i'%label)
+
+		sum_m = sum(m)
+		if sum_m % m_vali_test == 0:
+			if sum_m == m_vali_test:
+				sub = 'vali'
+			elif sum_m == m_vali_test * 2:
+				sub = 'test'
+			else:
+				sub = 'train'
+			if sum_m % 1e4 == 0 or sub != 'train':
+				print('F %.3f, T %.3f, total %.3f, writing to %s'%(m[0]/1e6, m[1]/1e6, sum_m/1e6, sub))
+			with open(path_out+'.'+sub,'a',encoding='utf-8') as f:
+				f.write('\n'.join(lines) + '\n')
+			lines = []
+	
+	print('finally, repeats = %s'%repeats)
+	print('F %.3f, T %.3f, total %.3f'%(m[0]/1e6, m[1]/1e6, sum_m/1e6))
+	with open(path_out+'.train','a',encoding='utf-8') as f:
+		f.write('\n'.join(lines))
+		
 
 def build_mixed_dataset(path_scored, tlike_score, prob_rand, n_tlike, n_rand):
 	# given a scored txt file, output mixture of half high-score and half rand-sampled
@@ -154,8 +199,13 @@ def build_mixed_dataset(path_scored, tlike_score, prob_rand, n_tlike, n_rand):
 
 
 if __name__ == "__main__":
+	"""
 	path_scored = 'D:/data/reddit/scored36M/scored.tsv'
 	tlike_score = 0.37
 	prob_rand = 5./36.2
 	build_mixed_dataset(path_scored, tlike_score, prob_rand, 5e6, 5e6)
-
+	"""
+	path_T = 'D:/data/fuse/Holmes/combined.txt'
+	path_F = 'D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/filtered/train.txt'
+	path_out = 'd:/data/fuse/classifier_reddit3f+holmes2/mixed'
+	mix_shuffle(path_T, path_F, path_out, n=1e6, repeat=True)
