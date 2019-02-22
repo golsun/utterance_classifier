@@ -175,14 +175,23 @@ class Classifier():
 
 		lines = ['\t'.join(['turn','src','tgt','truth','pred'])]
 		for i in range(len(labels)):
-			txt_src = self.dataset.seq2text(data_src[i,:])
-			line = '\t'.join([
-				'%i'%(len(txt_src.split('EOS')) + 1),
-				txt_src,
-				self.dataset.seq2text(data_tgt[i,:]),
-				'%i'%labels[i],
-				'%.4f'%labels_pred[i],
-				])
+			if len(self.prefix) == 1:
+				line = '\t'.join([
+					'0',
+					self.dataset.seq2text(inp[i,:]),
+					'%i'%labels[i],
+					'%.4f'%labels_pred[i],
+					])
+			else:
+				data_src, data_tgt = inp
+				txt_src = self.dataset.seq2text(data_src[i,:])
+				line = '\t'.join([
+					'%i'%(len(txt_src.split('EOS')) + 1),
+					txt_src,
+					self.dataset.seq2text(data_tgt[i,:]),
+					'%i'%labels[i],
+					'%.4f'%labels_pred[i],
+					])
 			lines.append(line)
 
 		fld_vali = self.fld + '/post'
@@ -280,7 +289,10 @@ def post(fld):
 	import matplotlib.pyplot as plt
 	grouped_by_true = {'all':[[], []]}
 	for line in line_generator(fld + '/test.tsv'):
-		turn, _, _, truth, pred = line.split('\t')
+		ss = line.split('\t')
+		turn = ss[0]
+		truth = ss[-2]
+		pred = ss[-1]
 		try:
 			truth = int(truth)
 		except ValueError:
@@ -303,8 +315,8 @@ def post(fld):
 		ax.set_title('%s-turn: Reddit = %.2f, Twitter = %.2f'%(k, np.mean(reddit), np.mean(twitter)))
 		ax.set_xlabel('score')
 		y = ax.get_ylim()[1] * 0.5
-		ax.text(0.2, y, 'Reddit', color='b')
-		ax.text(0.6, y, 'Twitter', color='r')
+		ax.text(0.2, y, 'False', color='b')
+		ax.text(0.6, y, 'True', color='r')
 		plt.savefig(fld + '/%s_hist.png'%k)
 		plt.close()
 
