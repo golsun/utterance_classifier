@@ -91,7 +91,7 @@ class Dataset:
 
 
 
-def mix_shuffle(path_T, path_F, path_out, n=2e6, repeat=False, tgt_only=False):
+def mix_shuffle(path_T, path_F, path_out, n=2e6, prob_T=0.5, repeat=False, tgt_only=False):
 	# mix data with label 1 (True, path_T) and label 0 (False, path_F)
 	import numpy as np
 	m_vali_test = 1000
@@ -103,9 +103,14 @@ def mix_shuffle(path_T, path_F, path_out, n=2e6, repeat=False, tgt_only=False):
 
 	repeats = [0, 0]
 	m = [0, 0]
+	sum_m = 0
 	lines = []
 	while sum(m) < n:
-		label = int(np.round(np.random.random()))
+		if sum_m < m_vali_test * 2 + 10:
+			prob = 0.5
+		else:
+			prob = prob_T
+		label = int(np.random.random() < prob)
 		line = ff[label].readline()
 		if line == '':	# end of file
 			if repeat:
@@ -129,7 +134,7 @@ def mix_shuffle(path_T, path_F, path_out, n=2e6, repeat=False, tgt_only=False):
 			else:
 				sub = 'train'
 			if sum_m % 1e4 == 0 or sub != 'train':
-				print('F %.3f, T %.3f, total %.3f, writing to %s'%(m[0]/1e6, m[1]/1e6, sum_m/1e6, sub))
+				print('F %.3f, T %.3f, total %.3f, prob = %.2f, writing to %s'%(m[0]/1e6, m[1]/1e6, sum_m/1e6, prob, sub))
 			with open(path_out+'.'+sub,'a',encoding='utf-8') as f:
 				f.write('\n'.join(lines) + '\n')
 			lines = []
@@ -240,6 +245,24 @@ def build_mixed_dataset(path_scored, tlike_score, prob_rand, n_tlike, n_rand):
 		))	
 
 
+def vocab_intersect(path_A, path_B, path_out):
+	vocabs = []
+	for path in [path_A, path_B]:
+		print('reading '+path)
+		vocab = set([line.strip('\n') for line in open(path, encoding='utf-8')])
+		print('len = %i'%len(vocab))
+		vocabs.append(vocab)
+	intersect = vocabs[0] & vocabs[1]
+	print('intersect %i'%len(intersect))
+	vv = []
+	for v in vocabs[0]:
+		if v in intersect:
+			vv.append(v)
+	with open(path_out, 'w', encoding='utf-8') as f:
+		f.write('\n'.join(vv))
+
+
+
 if __name__ == "__main__":
 	"""
 	path_scored = 'D:/data/reddit/scored36M/scored.tsv'
@@ -247,14 +270,23 @@ if __name__ == "__main__":
 	prob_rand = 5./36.2
 	build_mixed_dataset(path_scored, tlike_score, prob_rand, 5e6, 5e6)
 	"""
-	
+	#"""
+	prob_T = 0.1
 	path_T = 'D:/data/fuse/Holmes/combined.txt'
 	path_F = 'D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/filtered/train.txt'
-	path_out = 'd:/data/fuse/classifier_reddit3f+holmes2/mixed'
-	mix_shuffle(path_T, path_F, path_out, n=1e6, repeat=True, tgt_only=True)
+	path_out = 'd:/data/classifier/reddit3f_holmes2_probT%.1f/mixed'%prob_T
+	#mix_shuffle(path_T, path_F, path_out, n=1e6, repeat=True, prob_T=prob_T, tgt_only=True)
+	#"""
 	
 	for sub in ['vali','test','train']:
 		path_txt = path_out + '.' + sub
 		path_vocab = 'd:/data/fuse/reddit3f+holmes2_bb/vocab.txt'
 		txt2num(path_txt, path_vocab, tgt_only=True)
+		#"""
+	"""
+	path_A = 'D:/data/fuse/holmes/vocab.txt'
+	path_B = 'D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/vocab.txt'
+	path_out = 'd:/data/fuse/classifier_reddit3f+holmes2/vocab_intersect.txt'
+	vocab_intersect(path_A, path_B, path_out)
+	"""
 	

@@ -7,8 +7,8 @@ EOS_token = '_EOS_'
 UNK_token = '_UNK_'
 
 hostname = socket.gethostname()
-if hostname in ['MININT-3LHNLKS', 'xiag-0228']:
-	fld_data = 'd:/data'
+if hostname in ['MININT-3LHNLKS']:
+	fld_data = 'd:/data/classifier/'
 	PLOT = True
 elif 'GCR' in hostname:
 	fld_data = 'data'

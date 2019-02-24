@@ -200,7 +200,6 @@ class Classifier():
 			f.write('\n'.join(lines))
 
 
-
 	def interact(self):
 		while True:
 			print('--- context ---')
@@ -336,8 +335,6 @@ def cal_score(classifier, path_in):
 	batch_size = 100
 	open(path_out, 'w')
 	lines = open(path_in, encoding='utf-8').readlines()
-	n_lines = len(lines)
-	i0 = 0
 	sum_score = 0.
 	n_high = 0
 
@@ -408,8 +405,8 @@ if __name__ == '__main__':
 	parser.add_argument('--mlp_depth', type=int, default=2)
 	parser.add_argument('--mlp_units', type=int, default=32)
 	parser.add_argument('--tgt_only', action='store_true')
-	parser.add_argument('--data_name', default='classifier/mixed')		# for training
-	parser.add_argument('--score_path', default='D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/train.txt.2turns')
+	parser.add_argument('--data_name', default='reddit3f_holmes2_probT0.1')		# for training
+	parser.add_argument('--score_path', default='')
 	args = parser.parse_args()
 
 	fld = 'out/en(%i,%i),mlp(%i,%i),tgt_only%i'%(
