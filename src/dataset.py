@@ -62,6 +62,8 @@ class Dataset:
 		labels = []
 		i = 0
 		for line in self.generator[task]:
+			if line == '':
+				break
 			if 'src' in prefix and 'tgt' in prefix:
 				src, tgt, label = line.strip('\n').split('\t')
 			else:
@@ -249,10 +251,10 @@ def vocab_intersect(path_A, path_B, path_out):
 	vocabs = []
 	for path in [path_A, path_B]:
 		print('reading '+path)
-		vocab = set([line.strip('\n') for line in open(path, encoding='utf-8')])
+		vocab = [line.strip('\n') for line in open(path, encoding='utf-8')]
 		print('len = %i'%len(vocab))
 		vocabs.append(vocab)
-	intersect = vocabs[0] & vocabs[1]
+	intersect = set(vocabs[0]) & set(vocabs[1])
 	print('intersect %i'%len(intersect))
 	vv = []
 	for v in vocabs[0]:
@@ -275,7 +277,7 @@ if __name__ == "__main__":
 	path_T = 'D:/data/fuse/Holmes/combined.txt'
 	path_F = 'D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/filtered/train.txt'
 	path_out = 'd:/data/classifier/reddit3f_holmes2_probT%.1f/mixed'%prob_T
-	#mix_shuffle(path_T, path_F, path_out, n=1e6, repeat=True, prob_T=prob_T, tgt_only=True)
+	#mix_shuffle(path_T, path_F, path_out, n=1e6, prob_T=prob_T, tgt_only=True)
 	#"""
 	
 	for sub in ['vali','test','train']:
@@ -286,7 +288,7 @@ if __name__ == "__main__":
 	"""
 	path_A = 'D:/data/fuse/holmes/vocab.txt'
 	path_B = 'D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/vocab.txt'
-	path_out = 'd:/data/fuse/classifier_reddit3f+holmes2/vocab_intersect.txt'
+	path_out = 'd:/data/classifier/reddit3f_holmes2_probT0.1/vocab.txt'
 	vocab_intersect(path_A, path_B, path_out)
-	"""
+	#"""
 	

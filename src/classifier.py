@@ -27,8 +27,8 @@ class LossHistory(Callback):
 
 class Classifier():
 
-	def __init__(self, fld, dataset, encoder_depth, rnn_units, mlp_depth, mlp_units, tgt_only=False, lr=1e-4, dropout=0.):
-		if tgt_only:
+	def __init__(self, fld, dataset, args):
+		if args.tgt_only:
 			self.prefix = ['tgt']
 		else:
 			self.prefix = ['src','tgt']
@@ -36,12 +36,12 @@ class Classifier():
 
 		self.fld = fld
 		self.dataset = dataset
-		self.encoder_depth = encoder_depth
-		self.rnn_units = rnn_units
-		self.mlp_depth = mlp_depth
-		self.mlp_units = mlp_units
-		self.lr = lr
-		self.dropout = dropout
+		self.encoder_depth = args.encoder_depth
+		self.rnn_units = args.rnn_units
+		self.mlp_depth = args.mlp_depth
+		self.mlp_units = args.mlp_units
+		self.lr = args.lr
+		self.dropout = args.dropout
 		makedirs(self.fld + '/epochs')
 
 		self.log_train = self.fld + '/train'
@@ -146,7 +146,7 @@ class Classifier():
 
 	def train(self, 
 		epochs=1, 
-		batch_size=128, 
+		batch_size=512, 
 		batch_per_load=100):
 
 		shutil.copyfile(self.dataset.path_vocab, self.fld + '/vocab.txt')
@@ -155,7 +155,7 @@ class Classifier():
 		for epoch in range(epochs):
 			self.dataset.reset('train')
 			while True:
-				s = '\n***** Epoch %i/%i, trained %.2fM *****'%(
+				s = '\n***** Epoch %i/%i, trained %.4fM *****'%(
 					epoch + 1, epochs, self.n_trained/1e6)
 				write_log(self.log_train + '.log', s)
 				m = self.train_a_load(batch_size, batch_per_load)
@@ -404,13 +404,15 @@ if __name__ == '__main__':
 	parser.add_argument('--rnn_units', type=int, default=32)
 	parser.add_argument('--mlp_depth', type=int, default=2)
 	parser.add_argument('--mlp_units', type=int, default=32)
+	parser.add_argument('--lr', type=float, default=1e-4)
+	parser.add_argument('--dropout', type=float, default=0.)
 	parser.add_argument('--tgt_only', action='store_true')
 	parser.add_argument('--data_name', default='reddit3f_holmes2_probT0.1')		# for training
 	parser.add_argument('--score_path', default='')
 	args = parser.parse_args()
 
-	fld = 'out/en(%i,%i),mlp(%i,%i),tgt_only%i'%(
-		args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units, args.tgt_only)
+	fld = 'out/en(%i,%i),mlp(%i,%i),tgtonly%i,lr%s,dropout%.2f'%(
+		args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units, args.tgt_only,args.lr,args.dropout)
 	
 	if args.mode == 'score':
 		fld_vocab = fld
@@ -418,8 +420,7 @@ if __name__ == '__main__':
 		fld_vocab = fld_data + '/' + args.data_name
 	dataset = Dataset(fld_vocab)
 
-	classifier = Classifier(fld, dataset, 
-		args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units, tgt_only=args.tgt_only)
+	classifier = Classifier(fld, dataset, args)
 	classifier.build_model()
 	if args.mode != 'train':
 		classifier.load_weights()
