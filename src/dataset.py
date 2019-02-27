@@ -93,15 +93,16 @@ class Dataset:
 
 
 
-def mix_shuffle(path_T, path_F, path_out, n=2e6, prob_T=0.5, repeat=False, tgt_only=False):
+def mix_shuffle(path_T, path_F, fld_out, n=2e6, prob_T=0.5, repeat=False, tgt_only=False):
 	# mix data with label 1 (True, path_T) and label 0 (False, path_F)
-	import numpy as np
+	#import numpy as np
 	m_vali_test = 1000
+	makedirs(fld_out)
 
 	paths = [path_F, path_T]
 	ff = [open(path, encoding='utf-8') for path in paths]
 	for sub in ['vali','test','train']:
-		open(path_out+'.'+sub, 'w')
+		open(fld_out+'/'+sub, 'w')
 
 	repeats = [0, 0]
 	m = [0, 0]
@@ -137,13 +138,13 @@ def mix_shuffle(path_T, path_F, path_out, n=2e6, prob_T=0.5, repeat=False, tgt_o
 				sub = 'train'
 			if sum_m % 1e4 == 0 or sub != 'train':
 				print('F %.3f, T %.3f, total %.3f, prob = %.2f, writing to %s'%(m[0]/1e6, m[1]/1e6, sum_m/1e6, prob, sub))
-			with open(path_out+'.'+sub,'a',encoding='utf-8') as f:
+			with open(fld_out+'/'+sub,'a',encoding='utf-8') as f:
 				f.write('\n'.join(lines) + '\n')
 			lines = []
 	
 	print('finally, repeats = %s'%repeats)
 	print('F %.3f, T %.3f, total %.3f'%(m[0]/1e6, m[1]/1e6, sum_m/1e6))
-	with open(path_out+'.train','a',encoding='utf-8') as f:
+	with open(fld_out+'/train', 'a',encoding='utf-8') as f:
 		f.write('\n'.join(lines))
 		
 
@@ -264,6 +265,61 @@ def vocab_intersect(path_A, path_B, path_out):
 		f.write('\n'.join(vv))
 
 
+def len_based_sample(path, wt, crit_len=30, n_max=-1):
+	sum_l = 0
+	sum_n = 0
+	lines = []
+	path_out = path+'.len%.2f'%wt
+	open(path_out, 'w')
+	for i, line in enumerate(open(path, encoding='utf-8')):
+		tgt = line.strip('\n').split('\t')[-1]
+		l = len(tgt.split())
+		p = 1. - wt * (1 - min(l, crit_len)/crit_len) 
+		# l = 30, p = 1
+		# l = 10, p = 1 - wt * 2/3
+		if np.random.random() <= p:
+			lines.append(tgt)
+			sum_l += l
+			sum_n += 1
+			if sum_n % 1e5 == 0:
+				print('avg len %.3f, picked %.2f M from %.2f M'%(
+					sum_l/sum_n, sum_n/1e6, i/1e6))
+				with open(path_out, 'a', encoding='utf-8') as f:
+					f.write('\n'.join(lines) + '\n')
+				lines = []
+			if sum_n == n_max:
+				break
+	with open(path_out, 'a', encoding='utf-8') as f:
+		f.write('\n'.join(lines) + '\n')
+
+
+def score_based_sample(path, wt, crit_score=0.5, n_max=-1):
+	sum_s = 0
+	sum_n = 0
+	n_hi = 0
+	lines = []
+	path_out = path+'.scorewt%.2f'%wt
+	open(path_out, 'w')
+	for i, line in enumerate(open(path, encoding='utf-8')):
+		src, tgt, _, score = line.strip('\n').split('\t')
+		score = float(score)
+		p = 1. - wt * (1 - min(score, crit_score)/crit_score) 
+		if np.random.random() <= p:
+			lines.append(src + '\t' + tgt)
+			sum_s += score
+			sum_n += 1
+			n_hi += score >= crit_score
+			if sum_n % 1e5 == 0:
+				print('avg score %.3f, picked %.2f M from %.2f M, hi_ratio = %.3f'%(
+					sum_s/sum_n, sum_n/1e6, i/1e6, n_hi/sum_n))
+				with open(path_out, 'a', encoding='utf-8') as f:
+					f.write('\n'.join(lines) + '\n')
+				lines = []
+			if sum_n == n_max:
+				break
+	with open(path_out, 'a', encoding='utf-8') as f:
+		f.write('\n'.join(lines) + '\n')
+
 
 if __name__ == "__main__":
 	"""
@@ -272,17 +328,18 @@ if __name__ == "__main__":
 	prob_rand = 5./36.2
 	build_mixed_dataset(path_scored, tlike_score, prob_rand, 5e6, 5e6)
 	"""
-	#"""
-	prob_T = 0.1
+	"""
 	path_T = 'D:/data/fuse/Holmes/combined.txt'
-	path_F = 'D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/filtered/train.txt'
-	path_out = 'd:/data/classifier/reddit3f_holmes2_probT%.1f/mixed'%prob_T
-	#mix_shuffle(path_T, path_F, path_out, n=1e6, prob_T=prob_T, tgt_only=True)
+	path_F = 'D:/data/reddit/out(d2-10, l30w, s1, t0)/train.txt'
+
+	fld_out = 'd:/data/classifier/reddit1f_holmes2_probT0.1'
+	mix_shuffle(path_T, path_F, fld_out, n=6e6, prob_T=0.1, tgt_only=True)
 	#"""
 	
+	"""
 	for sub in ['vali','test','train']:
-		path_txt = path_out + '.' + sub
-		path_vocab = 'd:/data/fuse/reddit3f+holmes2_bb/vocab.txt'
+		path_txt = fld_out + '/' + sub
+		path_vocab = fld_out + '/vocab.txt'
 		txt2num(path_txt, path_vocab, tgt_only=True)
 		#"""
 	"""
@@ -291,4 +348,7 @@ if __name__ == "__main__":
 	path_out = 'd:/data/classifier/reddit3f_holmes2_probT0.1/vocab.txt'
 	vocab_intersect(path_A, path_B, path_out)
 	#"""
+
+	path = 'D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/train.txt'
+	score_based_sample('D:/data/reddit/out(d2-10, l30w, s1, t0)/train.txt.scored', wt=1., n_max=3e6)
 	

@@ -10,7 +10,9 @@ from dataset import Dataset
 from util import *
 
 
-
+#import os
+#os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+#os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 class LossHistory(Callback):
 	def reset(self):
@@ -146,7 +148,7 @@ class Classifier():
 
 	def train(self, 
 		epochs=1, 
-		batch_size=512, 
+		batch_size=128,#512, 
 		batch_per_load=100):
 
 		shutil.copyfile(self.dataset.path_vocab, self.fld + '/vocab.txt')
@@ -329,12 +331,12 @@ def post(fld):
 
 
 
-def cal_score(classifier, path_in):
+def cal_score(classifier, path_in, n_max=-1):
 	path_out = path_in + '.scored'
 	print('scoring '+path_in)
 	batch_size = 100
 	open(path_out, 'w')
-	lines = open(path_in, encoding='utf-8').readlines()
+	#lines = open(path_in, encoding='utf-8').readlines()
 	sum_score = 0.
 	n_high = 0
 
@@ -345,52 +347,66 @@ def cal_score(classifier, path_in):
 
 	j = 0
 	data_src, data_tgt = get_tensor()
-	src_tgt = []
+	uttr = []
 
 	n_high = 0
 	n = 0
 	sum_score = 0.
 
-	for line in open(path_in, encoding='utf-8'):
+	f_in = open(path_in, encoding='utf-8')
+	while True:
+		try:
+			line = f_in.readline()
+		except UnicodeDecodeError:
+			continue
+		if line == '':
+			break
 		n += 1
-		src_tgt.append(line.strip('\n'))
-		src, tgt = line.strip('\n').split('\t')
-		src = src.split(' EOS ')[-1].strip()		# as the classifier is only trained on 2-turn data
-		seq_src = classifier.dataset.text2seq(src)
+		uttr.append(line.strip('\n'))
+		tt = line.strip('\n').split('\t')
+		tgt = tt[-1]
+		if len(classifier.prefix) == 2:
+			src = tt[0].split(' EOS ')[-1].strip()		# as the classifier is only trained on 2-turn data
+			seq_src = classifier.dataset.text2seq(src)
+			n_words = min(len(seq_src), classifier.dataset.max_seq_len[0])
+			for t, token_index in enumerate(seq_src[-n_words:]):
+				data_src[j, t] = token_index
+				
 		seq_tgt = classifier.dataset.text2seq(tgt)
-
-		n_words = min(len(seq_src), classifier.dataset.max_seq_len[0])
-		for t, token_index in enumerate(seq_src[-n_words:]):
-			data_src[j, t] = token_index
-
 		n_words = min(len(seq_tgt), classifier.dataset.max_seq_len[1])
 		for t, token_index in enumerate(seq_tgt[-n_words:]):
 			data_tgt[j, t] = token_index
 
 		j += 1
 		if j == batch_size:
-			scores = classifier.model.predict([data_src, data_tgt], verbose=0).ravel()
+			if len(classifier.prefix) == 2:
+				inp = [data_src, data_tgt]
+			else:
+				inp = data_tgt
+			scores = classifier.model.predict(inp, verbose=0).ravel()
 			sum_score += np.sum(scores)
 			lines = []
 			for i in range(batch_size):
 				score = scores[i]
-				lines.append(src_tgt[i] + '\t' + '%.4f'%score)
+				n_words = len(uttr[i].split('\t')[-1].split())
+				lines.append(uttr[i] + '\t' + str(n_words) + '\t%.4f'%score)
 				n_high += score > 0.5
 			with open(path_out, 'a', encoding='utf-8') as f:
 				f.write('\n'.join(lines) + '\n')
-			print('processed %.3f M, avg_score = %.2f, perc > 0.5 = %.1f'%(
+			if n % 1e4 == 0:
+				print('processed %.3f M, avg_score = %.2f, perc > 0.5 = %.1f'%(
 					n/1e6,
 					sum_score/n,
 					n_high/n*100.,
-				))
+					))
 			
 			# reset
 			j = 0
 			data_src, data_tgt = get_tensor()
-			src_tgt = []
+			uttr = []
 
-					
-
+		if n == n_max:
+			break
 
 
 
@@ -399,7 +415,7 @@ def cal_score(classifier, path_in):
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--mode', default='score')
+	parser.add_argument('mode', type=str)
 	parser.add_argument('--encoder_depth', type=int, default=2)
 	parser.add_argument('--rnn_units', type=int, default=32)
 	parser.add_argument('--mlp_depth', type=int, default=2)
@@ -407,13 +423,23 @@ if __name__ == '__main__':
 	parser.add_argument('--lr', type=float, default=1e-4)
 	parser.add_argument('--dropout', type=float, default=0.)
 	parser.add_argument('--tgt_only', action='store_true')
-	parser.add_argument('--data_name', default='reddit3f_holmes2_probT0.1')		# for training
+	parser.add_argument('--data_name', default='reddit1f_holmes2_probT0.1')		# for training
 	parser.add_argument('--score_path', default='')
+	parser.add_argument('--restore', default='')
+	parser.add_argument('--n_max', type=int, default=-1)
+
 	args = parser.parse_args()
 
-	fld = 'out/en(%i,%i),mlp(%i,%i),tgtonly%i,lr%s,dropout%.2f'%(
-		args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units, args.tgt_only,args.lr,args.dropout)
-	
+	if args.restore == '':
+		fld = 'out/%s/en(%i,%i),mlp(%i,%i),tgtonly%i,lr%s,dropout%.2f'%(
+			args.data_name,
+			args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units, args.tgt_only,args.lr,args.dropout)
+	else:
+		fld = args.restore
+	if os.path.exists(fld) and args.mode == 'train':
+		print('fld already exists')
+		exit()
+
 	if args.mode == 'score':
 		fld_vocab = fld
 	else:
@@ -435,7 +461,7 @@ if __name__ == '__main__':
 	elif args.mode == 'post':
 		post(fld + '/post')
 	elif args.mode == 'score':
-		cal_score(classifier, arg.score_path)
+		cal_score(classifier, args.score_path, n_max=args.n_max)
 
 
 
