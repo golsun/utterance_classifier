@@ -126,8 +126,8 @@ class Classifier():
 
 		self.model = Model(inp, out)
 		self.model.compile(optimizer=Adam(lr=self.lr), loss='binary_crossentropy')
-		if PLOT:
-			plot_model(self.model, self.fld + '/model.png',	show_shapes=True)
+		#if PLOT:
+		#	plot_model(self.model, self.fld + '/model.png',	show_shapes=True)
 
 
 	def save_weights(self, fname, subfld=False):
@@ -332,7 +332,13 @@ def post(fld):
 
 
 def cal_score(classifier, path_in, n_max=-1):
-	path_out = path_in + '.scored'
+	pt_out = os.getenv('PT_OUTPUT_DIR')
+	if pt_out is not None:
+		with open(pt_out + '/readme.txt', 'w') as f:
+			f.write('path_in = %s'%path_in)
+		path_out = pt_out + '/scored.tsv'
+	else:
+		path_out = path_in + '.scored'
 	print('scoring '+path_in)
 	batch_size = 100
 	open(path_out, 'w')

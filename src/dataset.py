@@ -301,7 +301,10 @@ def score_based_sample(path, wt, crit_score=0.5, n_max=-1):
 	path_out = path+'.scorewt%.2f'%wt
 	open(path_out, 'w')
 	for i, line in enumerate(open(path, encoding='utf-8')):
-		src, tgt, _, score = line.strip('\n').split('\t')
+		tt = line.strip('\n').split('\t')
+		if len(tt) != 4:
+			continue
+		src, tgt, _, score = tt
 		score = float(score)
 		p = 1. - wt * (1 - min(score, crit_score)/crit_score) 
 		if np.random.random() <= p:
@@ -350,5 +353,9 @@ if __name__ == "__main__":
 	#"""
 
 	path = 'D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/train.txt'
-	score_based_sample('D:/data/reddit/out(d2-10, l30w, s1, t0)/train.txt.scored', wt=1., n_max=3e6)
+	for part in range(5):
+		print('part %i'%part)
+		score_based_sample(
+			'D:/data/reddit/out(d2-10, l30w, s1, t0)/2012/train.txt.part%i.scored'%part, 
+			wt=1., n_max=3e6)
 	
