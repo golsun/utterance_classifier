@@ -5,12 +5,15 @@ class Dataset:
 	def __init__(self, 
 		fld_data, 
 		max_seq_len=[150,32],
+		include_punc=False,
 		):
 
 		self.path_vocab = os.path.join(fld_data, 'vocab.txt')
 		self.path_train = os.path.join(fld_data, 'train.num')
 		self.path_vali = os.path.join(fld_data, 'vali.num')
 		self.path_test = os.path.join(fld_data, 'test.num')
+
+		self.include_punc = include_punc
 
 		# load token dictionary
 
@@ -20,6 +23,11 @@ class Dataset:
 		self.SOS = self.token2index[SOS_token]
 		self.EOS = self.token2index[EOS_token]
 		self.num_tokens = len(self.token2index)	# not including 0-th
+		
+		if not self.include_punc:
+			self.is_word = dict()
+			for ix in self.index2token:
+				self.is_word[ix] = is_word(self.index2token[ix])
 
 		# load source-target pairs, tokenized
 		
@@ -49,7 +57,8 @@ class Dataset:
 		seq = []
 		ix_unk = self.token2index[UNK_token]
 		for token in tokens:
-			seq.append(self.token2index.get(token, ix_unk))
+			if self.include_punc or is_word(token):		# skip non-word (symbol) is necessary
+				seq.append(self.token2index.get(token, ix_unk))
 		return seq
 
 
@@ -72,14 +81,20 @@ class Dataset:
 			if 'src' in prefix:
 				words = src.split()
 				n_words = min(len(words), self.max_seq_len[0])
-				for t, token_index in enumerate(words[-n_words:]):
-					data_src[i, t] = token_index
+				t = 0
+				for token_index in words[-n_words:]:
+					if self.include_punc or self.is_word[token_index]:		# skip non-word (symbol) is necessary
+						data_src[i, t] = token_index
+						t += 1
 
 			if 'tgt' in prefix:
 				words = tgt.split()
 				n_words = min(len(words), self.max_seq_len[1])
-				for t, token_index in enumerate(words[-n_words:]):
-					data_tgt[i, t] = token_index
+				t = 0
+				for token_index in words[-n_words:]:
+					if self.include_punc or self.is_word[token_index]:		# skip non-word (symbol) is necessary
+						data_tgt[i, t] = token_index
+						t += 1
 
 			labels.append(float(label))
 			i += 1
@@ -324,6 +339,13 @@ def score_based_sample(path, wt, crit_score=0.5, n_max=-1):
 		f.write('\n'.join(lines) + '\n')
 
 
+def is_word(token):
+	for c in token:
+		if c.isalpha():
+			return True
+	return False
+
+
 if __name__ == "__main__":
 	"""
 	path_scored = 'D:/data/reddit/scored36M/scored.tsv'
@@ -352,10 +374,17 @@ if __name__ == "__main__":
 	vocab_intersect(path_A, path_B, path_out)
 	#"""
 
+	"""
 	path = 'D:/data/reddit/out(d2-10, l30w, s0, t1)/ref_3/train.txt'
 	for part in range(5):
 		print('part %i'%part)
 		score_based_sample(
 			'D:/data/reddit/out(d2-10, l30w, s1, t0)/2012/train.txt.part%i.scored'%part, 
 			wt=1., n_max=3e6)
+			"""
+	
+	print(is_word('.'))
+	print(is_word("n't"))
+	print(is_word("wtf"))
+	
 	

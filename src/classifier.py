@@ -415,6 +415,27 @@ def cal_score(classifier, path_in, n_max=-1):
 			break
 
 
+def load_args(fld):
+	args_loaded = dict()
+	for line in open(fld+'/args.csv'):
+		k, v = line.strip('\n').split(',')
+		if v.lower() == 'true':
+			v = True
+		elif v.lower() == 'false':
+			v = False
+		else:
+			raise ValueError('cannot read arg:'+line)
+		args_loaded[k] = v
+	return args_loaded
+
+
+def save_args(fld, args):
+	lines = []
+	for k in ['tgt_only', 'include_punc']:
+		lines.append('%s,%s'%(k, getattr(args, k)))
+	with open(fld + '/args.csv', 'w') as f:
+		f.write('\n'.join(lines))
+		
 
 	
 
@@ -433,26 +454,38 @@ if __name__ == '__main__':
 	parser.add_argument('--score_path', default='')
 	parser.add_argument('--restore', default='')
 	parser.add_argument('--n_max', type=int, default=-1)
+	parser.add_argument('--include_punc', action='store_true')		# by default (False), only care words, not punctions
 
 	args = parser.parse_args()
 
 	if args.restore == '':
-		fld = 'out/%s/en(%i,%i),mlp(%i,%i),tgtonly%i,lr%s,dropout%.2f'%(
+		fld = 'out/%s/en(%ix%i),mlp(%ix%i),pair%i,punc%i,lr%s,dropout%.2f'%(
 			args.data_name,
-			args.encoder_depth, args.rnn_units, args.mlp_depth, args.mlp_units, args.tgt_only,args.lr,args.dropout)
+			args.rnn_units, args.encoder_depth, 
+			args.mlp_units, args.mlp_depth, 
+			(not args.tgt_only), args.include_punc,
+			args.lr,args.dropout)
 	else:
 		fld = args.restore
 	if os.path.exists(fld) and args.mode == 'train':
 		print('fld already exists')
 		exit()
 
-	if args.mode == 'score':
+	if args.mode not in ['train', 'continue']:
+		args_loaded = load_args(fld)
+		print('WARNING: params overwritten by '+str(args_loaded))
+		for k in args_loaded:
+			setattr(args, k, args_loaded[k])
 		fld_vocab = fld
 	else:
 		fld_vocab = fld_data + '/' + args.data_name
-	dataset = Dataset(fld_vocab)
+		save_args(fld, args)
+
+	dataset = Dataset(fld_vocab, include_punc=args.include_punc)
 
 	classifier = Classifier(fld, dataset, args)
+	print(classifier.dataset.text2seq('hello , my name is SQG'))
+
 	classifier.build_model()
 	if args.mode != 'train':
 		classifier.load_weights()
@@ -468,6 +501,5 @@ if __name__ == '__main__':
 		post(fld + '/post')
 	elif args.mode == 'score':
 		cal_score(classifier, args.score_path, n_max=args.n_max)
-
 
 

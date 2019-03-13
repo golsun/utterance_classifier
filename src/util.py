@@ -9,11 +9,8 @@ UNK_token = '_UNK_'
 hostname = socket.gethostname()
 if hostname in ['MININT-3LHNLKS']:
 	fld_data = 'd:/data/classifier/'
-	PLOT = True
-elif 'GCR' in hostname:
+else:
 	fld_data = 'data'
-	PLOT = False
-
 
 def makedirs(fld):
 	if not os.path.exists(fld):
