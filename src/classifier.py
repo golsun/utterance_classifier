@@ -467,9 +467,13 @@ if __name__ == '__main__':
 			args.lr,args.dropout)
 	else:
 		fld = args.restore
-	if os.path.exists(fld) and args.mode == 'train':
-		print('fld already exists')
-		exit()
+
+	if args.mode == 'train':
+		if os.path.exists(fld):
+			print('fld already exists')
+			exit()
+		else:
+			os.makedirs(fld)
 
 	if args.mode not in ['train', 'continue']:
 		args_loaded = load_args(fld)
@@ -484,7 +488,9 @@ if __name__ == '__main__':
 	dataset = Dataset(fld_vocab, include_punc=args.include_punc)
 
 	classifier = Classifier(fld, dataset, args)
-	print(classifier.dataset.text2seq('hello , my name is SQG'))
+	seq = classifier.dataset.text2seq('hello , my name is SQG')
+	print(seq)
+	print(classifier.dataset.seq2text(seq))
 
 	classifier.build_model()
 	if args.mode != 'train':

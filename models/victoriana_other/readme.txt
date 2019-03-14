@@ -1,0 +1,1 @@
+en(32x2),mlp(32x2),pair0,punc0,lr0.0001,dropout0.00
