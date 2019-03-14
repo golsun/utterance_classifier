@@ -1,0 +1,1 @@
+{"encoder_depth": 2, "rnn_units": 32, "mlp_depth": 2, "mlp_units": 32, "tgt_only": true, "include_punc": false}
