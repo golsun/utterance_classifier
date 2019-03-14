@@ -8,6 +8,7 @@ from keras.callbacks import Callback
 from keras.optimizers import Adam
 from dataset import Dataset
 from util import *
+import json
 
 
 #import os
@@ -430,11 +431,14 @@ def load_args(fld):
 
 
 def save_args(fld, args):
+	"""
 	lines = []
 	for k in ['tgt_only', 'include_punc']:
 		lines.append('%s,%s'%(k, getattr(args, k)))
 	with open(fld + '/args.csv', 'w') as f:
 		f.write('\n'.join(lines))
+			"""
+	json.dump(args.__dict__, open(fld+'/args.json', 'w'))
 		
 
 	
@@ -457,6 +461,8 @@ if __name__ == '__main__':
 	parser.add_argument('--include_punc', action='store_true')		# by default (False), only care words, not punctions
 
 	args = parser.parse_args()
+	save_args('src', args)
+	exit()
 
 	if args.restore == '':
 		fld = 'out/%s/en(%ix%i),mlp(%ix%i),pair%i,punc%i,lr%s,dropout%.2f'%(

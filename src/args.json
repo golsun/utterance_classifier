@@ -1,0 +1,1 @@
+{"mode": "load", "encoder_depth": 2, "rnn_units": 32, "mlp_depth": 2, "mlp_units": 32, "lr": 0.0001, "dropout": 0.0, "tgt_only": false, "data_name": "reddit1f_holmes2_probT0.1", "score_path": "", "restore": "", "n_max": -1, "include_punc": false}

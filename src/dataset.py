@@ -57,7 +57,7 @@ class Dataset:
 		seq = []
 		ix_unk = self.token2index[UNK_token]
 		for token in tokens:
-			if self.include_punc or is_word(token):		# skip non-word (symbol) is necessary
+			if self.include_punc or is_word(token):		# skip punctuation if necessary
 				seq.append(self.token2index.get(token, ix_unk))
 		return seq
 
@@ -84,7 +84,7 @@ class Dataset:
 				t = 0
 				for token_index in words[-n_words:]:
 					token_index = int(token_index)
-					if self.include_punc or self.is_word[token_index]:		# skip non-word (symbol) is necessary
+					if self.include_punc or self.is_word[token_index]:		# skip punctuation if necessary
 						data_src[i, t] = token_index
 						t += 1
 
@@ -94,7 +94,7 @@ class Dataset:
 				t = 0
 				for token_index in words[-n_words:]:
 					token_index = int(token_index)
-					if self.include_punc or self.is_word[token_index]:		# skip non-word (symbol) is necessary
+					if self.include_punc or self.is_word[token_index]:		# skip punctuation if necessary
 						data_tgt[i, t] = token_index
 						t += 1
 
