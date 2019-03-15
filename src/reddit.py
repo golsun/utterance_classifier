@@ -303,7 +303,7 @@ def save_convo(path_rs, path_rc, path_out):
 		if len(txts) < args.min_depth:				# filter 3
 			continue	
 
-		lines.append(join_contexts(txts[:-1]) + '\t' + txts[-1])
+		lines.append(' EOS '.join(txts[:-1]) + '\t' + txts[-1])
 		sum_resp_len += len(txts[-1].split())
 		m += 1		
 
