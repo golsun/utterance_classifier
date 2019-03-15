@@ -417,6 +417,7 @@ def cal_score(classifier, path_in, n_max=-1):
 
 
 def load_args(fld):
+	"""
 	args_loaded = dict()
 	for line in open(fld+'/args.csv'):
 		k, v = line.strip('\n').split(',')
@@ -428,6 +429,8 @@ def load_args(fld):
 			raise ValueError('cannot read arg:'+line)
 		args_loaded[k] = v
 	return args_loaded
+	"""
+	return json.load(open(fld+'/args.json'))
 
 
 def save_args(fld, args):
