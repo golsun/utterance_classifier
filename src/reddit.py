@@ -22,6 +22,7 @@ import bz2
 #import markdown
 from bs4 import BeautifulSoup
 from util import *
+from nltk.tokenize import TweetTokenizer
 
 def makedirs(fld):
 	if not os.path.exists(fld):
@@ -53,7 +54,7 @@ parser.add_argument("--task", default='conv')
 
 args = parser.parse_args()
 
-fields_subm = [ "id", "subreddit", "score", "num_comments", "domain", "permalink", "title" ]
+fields_subm = [ "id", "score", "num_comments", "domain", "permalink", "title" ]
 fields_comm = [ "id", "author", "parent_id", "link_id", "score", "n_char", "body"]
 
 
