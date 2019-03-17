@@ -9,6 +9,7 @@ UNK_token = '_UNK_'
 hostname = socket.gethostname()
 if hostname in ['MININT-3LHNLKS']:
 	fld_data = 'd:/data/classifier/'
+	os.environ["CUDA_VISIBLE_DEVICES"]="-1" 	# don't use GPU
 else:
 	fld_data = 'data'
 

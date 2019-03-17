@@ -456,7 +456,7 @@ if __name__ == '__main__':
 	parser.add_argument('--mlp_units', type=int, default=32)
 	parser.add_argument('--lr', type=float, default=1e-4)
 	parser.add_argument('--dropout', type=float, default=0.)
-	parser.add_argument('--tgt_only', action='store_true')
+	parser.add_argument('--tgt_only', type=int, default=1)
 	parser.add_argument('--data_name', default='reddit1f_holmes2_probT0.1')		# for training
 	parser.add_argument('--score_path', default='')
 	parser.add_argument('--restore', default='')
@@ -464,8 +464,7 @@ if __name__ == '__main__':
 	parser.add_argument('--include_punc', action='store_true')		# by default (False), only care words, not punctions
 
 	args = parser.parse_args()
-	save_args('src', args)
-	exit()
+	args.tgt_only = bool(args.tgt_only)
 
 	if args.restore == '':
 		fld = 'out/%s/en(%ix%i),mlp(%ix%i),pair%i,punc%i,lr%s,dropout%.2f'%(
@@ -510,10 +509,6 @@ if __name__ == '__main__':
 		classifier.interact()
 	elif args.mode == 'test':
 		classifier.test()
-		if PLOT:
-			post(fld + '/post')
-	elif args.mode == 'post':
-		post(fld + '/post')
 	elif args.mode == 'score':
 		cal_score(classifier, args.score_path, n_max=args.n_max)
 
