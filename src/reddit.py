@@ -37,6 +37,8 @@ url_str = '__url__'
 parser = argparse.ArgumentParser()
 
 parser.add_argument("dump_name", help="YYYY-MM, dumped files to be loaded")
+parser.add_argument("--reddit_input", default="d:/data/reddit/bz2/", help="Location of the input reddit data (bz2 files)")
+parser.add_argument("--reddit_output", default="d:/data/reddit/", help="Location of the output reddit data (conversations)")
 parser.add_argument("--max_len", default=30, type=int)
 parser.add_argument("--max_len_type", default='w')		# w for words, c for chars
 parser.add_argument("--min_depth", default=2, type=int)
@@ -319,14 +321,15 @@ def save_convo(path_rs, path_rc, path_out):
 
 def extract():
 	makedirs(fld_split)
-	sids, ms, ns = extract_submissions(fld_root + '/bz2', fld_split, size=args.split_size)
-	mc, nc = extract_comments(fld_root + '/bz2', fld_split, sids)
+	sids, ms, ns = extract_submissions(fld_root_in, fld_split, size=args.split_size)
+	mc, nc = extract_comments(fld_root_in, fld_split, sids)
 	with open(fld_split + '/stat.tsv', 'a') as f:
 		f.write('\t'.join(map(str, [args.dump_name, mc, nc, ms, ns])) + '\n')
 
 
 def build_conv():
-	fld_out = fld_root + '/out(d%i-%i, l%i%s, s%i, t%i)'%(
+	#fld_out = fld_root_out + '/out(d%i-%i, l%i%s, s%i, t%i)'%(
+	fld_out = fld_root_out + '/out-d%i-%i-l%i%s-s%i-t%i'%(
 			args.min_depth, args.max_depth, args.max_len, args.max_len_type, args.min_score, args.use_title)
 	makedirs(fld_out)
 	path_out = fld_out + '/%s.tsv'%args.dump_name
@@ -353,8 +356,10 @@ def build_conv():
 		f.write('\t'.join([args.dump_name, 'all', str(sum_m), str(sum_n), '']) + '\n')
 
 
-fld_root = 'd:/data/reddit/'
-fld_split = fld_root + '/split(%.1fM)/%s'%(args.split_size/1e6, args.dump_name)
+fld_root_in = args.reddit_input
+fld_root_out = args.reddit_output
+#fld_split = fld_root_out + '/split(%.1fM)/%s'%(args.split_size/1e6, args.dump_name)
+fld_split = fld_root_out + '/split-%.1fM/%s'%(args.split_size/1e6, args.dump_name)
 if args.task == 'extract':
 	extract()
 elif args.task == 'conv':
