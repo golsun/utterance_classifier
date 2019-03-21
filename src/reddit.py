@@ -364,3 +364,5 @@ if args.task == 'extract':
 	extract()
 elif args.task == 'conv':
 	build_conv()
+else:
+	print("Unknown task: %s" % args.task, file=sys.stderr)
