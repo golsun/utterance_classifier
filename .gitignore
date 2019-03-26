@@ -1,6 +1,8 @@
 
 *.pyc
+.idea/
 out/
 scored/
 .ptignore
 data/
+Makefile
