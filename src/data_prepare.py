@@ -1,4 +1,5 @@
 from util import *
+from collections import Counter
 
 def mix_shuffle(path_T, path_F, fld_out, n=2e6, prob_T=0.5, repeat=False, tgt_only=False):
     # mix data with label 1 (True, path_T) and label 0 (False, path_F)
@@ -274,18 +275,23 @@ def avg_len(path, write=False):
     if write:
         with open(path+'.short', 'w') as f:
             f.write('\n'.join(lines_short))
-    
 
-
-if __name__ == "__main__":
-    fld = 'd:/data/classifier/holmes_vs_other'
-    #avg_len(fld + '/negative.txt', True)
-    #avg_len('d:/data/fuse/vicholmes/bias_nonc.txt', True)
-    #rand_subset('d:/data/reddit/holmeslike6m/train.txt', 830000, tgt_only=True, p=0.3)
-    #shuffle_file(fld + '/negative.txt')
-    #shuffle_file(fld + '/positive.txt')
-    #mix_shuffle(fld + '/positive.txt.shuffled', fld+'/negative.txt.shuffled', fld, prob_T=0.1)
-    #for name in ['vali', 'test', 'train']:
-    #    txt2num(fld+'/' + name, fld+'/vocab.txt', tgt_only=True)
+def top_ngram(fld, in_fname, n, min_freq=20, max_n=10000):
+    path = fld + '/' + in_fname
+    print('finding %igram from %s'%(n, path))
+    counter = Counter()
+    for line in open(path, encoding='utf-8'):
+        ww = [SOS_token] + line.strip('\n').split() + [EOS_token]
+        for i in range(n, len(ww) + 1):
+            ngram = ' '.join(ww[i - n: i])
+            counter[ngram] += 1
     
+    candidates = counter.most_common(max_n)
+    final = []
+    for ngram, count in candidates:
+        if count < min_freq:
+            break
+        final.append(ngram)
     
+    with open(fld + '/' + in_fname + '.%igram'%n, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(final))

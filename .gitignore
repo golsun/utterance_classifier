@@ -6,3 +6,4 @@ scored/
 .ptignore
 data/
 Makefile
+src/temp.py
