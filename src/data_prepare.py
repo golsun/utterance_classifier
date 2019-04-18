@@ -1,7 +1,7 @@
 from util import *
 from collections import Counter
 
-def mix_shuffle(path_T, path_F, fld_out, n=2e6, prob_T=0.5, repeat=False, tgt_only=False):
+def mix_shuffle(path_T, path_F, fld_out, n=2e6, prob_T=0.5, repeat=False, tgt_only=True):
     # mix data with label 1 (True, path_T) and label 0 (False, path_F)
     m_vali_test = 1000
     makedirs(fld_out)
@@ -55,7 +55,7 @@ def mix_shuffle(path_T, path_F, fld_out, n=2e6, prob_T=0.5, repeat=False, tgt_on
         f.write('\n'.join(lines))
         
 
-def txt2num(path_txt, path_vocab, tgt_only):
+def txt2num(path_txt, path_vocab, tgt_only=True):
     path_out = path_txt + '.num'
     token2ix = dict()
     for i, line in enumerate(open(path_vocab, encoding='utf-8')):
@@ -295,3 +295,22 @@ def top_ngram(fld, in_fname, n, min_freq=20, max_n=10000):
     
     with open(fld + '/' + in_fname + '.%igram'%n, 'w', encoding='utf-8') as f:
         f.write('\n'.join(final))
+
+
+def extract_tgt(path, n_max=1e6):
+    lines = []
+    for i, line in enumerate(open(path, encoding='utf-8')):
+        _, tgt = line.strip('\n').split('\t')
+        lines.append(tgt)
+        if i == n_max:
+            break
+    with open(path+'.tgt', 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lines))
+
+
+def build_dataset(fld, prob_T=0.1):
+    shuffle_file(fld + '/negative.txt')
+    shuffle_file(fld + '/positive.txt')
+    mix_shuffle(fld + '/positive.txt.shuffled', fld+'/negative.txt.shuffled', fld, prob_T=prob_T)
+    for name in ['vali', 'test', 'train']:
+        txt2num(fld+'/' + name, fld+'/vocab.txt')
