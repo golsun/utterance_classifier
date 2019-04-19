@@ -26,7 +26,6 @@ class ClassifierNgram:
 
 
     def get_Xy(self, f, batch):
-        X = np.zeros((batch, self.vocab_size))
         txts = []
         y = []
         m = 0
@@ -91,5 +90,44 @@ class ClassifierNgram:
 
 
 
-
+class ClassifierNgramEnsemble:
                 
+    def __init__(self, fld, include_punc=False):
+        self.fld = fld
+        self.children = dict()
+        self.wt = dict()
+        for ngram in [1, 2, 3, 4]:
+            self.children[ngram] = ClassifierNgram(fld, ngram, include_punc)
+            self.children[ngram].load()
+            acc = float(open(self.children[ngram].path_prefix + '.acc').readline().strip('\n'))
+            self.wt[ngram] = 2. * max(0, acc - 0.5)
+
+    def predict(self, txts):
+        avg_scores = np.array([0.] * len(txts))
+        for ngram in self.children:
+            scores = self.children[ngram].predict(txts)
+            avg_scores += scores * self.wt[ngram]
+        return avg_scores / sum(self.wt.values())
+
+    def test(self):
+        txts = []
+        y_vali = []
+        m = 0
+        for line in open(self.fld + '/test.txt', encoding='utf-8'):
+            txt, y = line.strip('\n').split('\t')
+        #for line in open(self.fld + '/positive.txt', encoding='utf-8'):
+        #    txt = line.strip('\n'); y = 1.
+            txts.append(txt)
+            y_vali.append(float(y))
+            m += 1
+            if m == 1000:
+                break
+
+        for ngram in self.children:
+            score = self.children[ngram].predict(txts)
+            acc = sum([int(score[i]>0.5) == y_vali[i] for i in range(len(y_vali))])/len(y_vali)
+            print('%igram acc = %.4f'%(ngram, acc))
+
+        score = self.predict(txts)
+        acc = sum([int(score[i]>0.5) == y_vali[i] for i in range(len(y_vali))])/len(y_vali)
+        print('ensemble acc = %.4f'%acc)
