@@ -74,3 +74,21 @@ def load_vocab(path):
 	assert(SOS_token in token2index)
 	assert(EOS_token in token2index)
 	return index2token, token2index
+
+
+
+def is_word(token):
+	for c in token:
+		if c.isalpha():
+			return True
+	return False
+
+
+	
+def txt2ww(txt, include_punc):
+    ww = [SOS_token]
+    for w in txt.split():
+        if include_punc or is_word(w):
+            ww.append(w)
+    ww.append(EOS_token)
+    return ww

@@ -1,16 +1,21 @@
-from util import SOS_token, EOS_token
-import numpy as np
+from util import *
 from sklearn import linear_model
 from sklearn import metrics 
+import pickle
 
 class ClassifierNgram:
 
-    def __init__(self, fld, ngram):
+    def __init__(self, fld, ngram, include_punc=False):
         self.fld = fld
         self.ngram2ix = dict()
         self.ngram = ngram
-        path_ngram = fld + '/%igram.txt'%ngram
-        for i, line in enumerate(open(path_ngram, encoding='utf-8')):
+        self.include_punc = include_punc
+
+        fname = '%igram'%ngram
+        if include_punc:
+            fname +=  '.include_punc'
+        self.path_prefix = fld + '/' + fname
+        for i, line in enumerate(open(self.path_prefix + '.txt', encoding='utf-8')):
             ngram = line.strip('\n')
             self.ngram2ix[ngram] = i
             assert(self.ngram == len(ngram.split()))
@@ -19,23 +24,33 @@ class ClassifierNgram:
         #self.model = LogisticRegression(solver='sag')#, max_iter=10)
         self.model = linear_model.SGDClassifier(loss='log', random_state=9, max_iter=1, tol=1e-3)
 
+
     def get_Xy(self, f, batch):
         X = np.zeros((batch, self.vocab_size))
+        txts = []
         y = []
         m = 0
         for line in f:
             x_, y_ = line.strip('\n').split('\t')
+            txts.append(x_)
             y.append(float(y_))
-            ww = [SOS_token] + x_.split() + [EOS_token]
-            for i in range(self.ngram, len(ww) + 1):
-                ngram = ' '.join(ww[i - self.ngram: i])
-                ix = self.ngram2ix.get(ngram, None)
-                if ix is not None:
-                    X[m, ix] = 1.
             m += 1
             if m == batch:
                 break
-        return X[:m, :], np.array(y[:m])
+        return self.txts2mat(txts), np.array(y[:m])
+
+
+    def txts2mat(self, txts):
+        X = np.zeros((len(txts), self.vocab_size))
+        for i, txt in enumerate(txts):
+            ww = txt2ww(txt, self.include_punc)
+            for t in range(self.ngram, len(ww) + 1):
+                ngram = ' '.join(ww[t - self.ngram: t])
+                j = self.ngram2ix.get(ngram, None)
+                if j is not None:
+                    X[i, j] = 1.
+        return X
+
 
     def fit(self, batch):
         X_vali, y_vali = self.get_Xy(open(self.fld + '/vali.txt', encoding='utf-8'), 1000)
@@ -59,14 +74,21 @@ class ClassifierNgram:
                 max_vali_acc = acc
                 print('saving best coef')
                 coef = self.model.coef_.ravel()
-                with open(fld + '/%igram_coef.txt'%self.ngram, 'w') as f:
+                with open(self.path_prefix + '.coef', 'w') as f:
                     f.write('\n'.join(['%.4f'%c for c in coef]))
-                with open(fld + '/%igram_acc.txt'%self.ngram, 'w') as f:
+                with open(self.path_prefix + '.acc', 'w') as f:
                     f.write(str(acc))
+                pickle.dump(self.model, open(self.path_prefix + '.p', 'wb'))
 
     def load(self):
-        coef = [float(line.strip('\n')) for line in open(self.fld + '/%igram_coef.txt'%self.ngram)]
-        self.model.coef_ = np.reshape(coef, (1, -1))
+        self.model = pickle.load(open(self.path_prefix + '.p', 'rb'))
+
+    def predict(self, txts):
+        data = self.txts2mat(txts)
+        prob = self.model.predict_proba(data)
+        return prob[:,1]
+
+
 
 
 

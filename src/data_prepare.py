@@ -276,12 +276,15 @@ def avg_len(path, write=False):
         with open(path+'.short', 'w') as f:
             f.write('\n'.join(lines_short))
 
-def top_ngram(fld, in_fname, n, min_freq=20, max_n=10000):
+
+
+
+def top_ngram(fld, in_fname, n, min_freq=20, max_n=10000, include_punc=False):
     path = fld + '/' + in_fname
     print('finding %igram from %s'%(n, path))
     counter = Counter()
     for line in open(path, encoding='utf-8'):
-        ww = [SOS_token] + line.strip('\n').split() + [EOS_token]
+        ww = txt2ww(line.strip('\n'), include_punc)
         for i in range(n, len(ww) + 1):
             ngram = ' '.join(ww[i - n: i])
             counter[ngram] += 1
@@ -316,10 +319,13 @@ def build_dataset(fld, prob_T=0.1):
         txt2num(fld+'/' + name, fld+'/vocab.txt')
 
 
-def build_ngram(fld, n):
-    top_ngram(fld, 'positive.txt', n)
-    top_ngram(fld, 'negative.txt', n)
-    combine_vocab(fld + '/positive.txt.%igram'%n, fld + '/negative.txt.%igram'%n, fld + '/%igram.txt'%n)
+def build_ngram(fld, n, include_punc=False):
+    top_ngram(fld, 'positive.txt', n, include_punc=include_punc)
+    top_ngram(fld, 'negative.txt', n, include_punc=include_punc)
+    suffix = '%igram'%n
+    if include_punc:
+        suffix += '.include_punc'
+    combine_vocab(fld + '/positive.txt.'+suffix, fld + '/negative.txt.'+suffix, fld + '/'+suffix+'.txt')
 
 
 

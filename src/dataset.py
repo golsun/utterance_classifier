@@ -110,12 +110,3 @@ class Dataset:
 
 
 
-
-def is_word(token):
-	for c in token:
-		if c.isalpha():
-			return True
-	return False
-
-
-	
