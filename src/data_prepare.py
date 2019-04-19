@@ -314,3 +314,35 @@ def build_dataset(fld, prob_T=0.1):
     mix_shuffle(fld + '/positive.txt.shuffled', fld+'/negative.txt.shuffled', fld, prob_T=prob_T)
     for name in ['vali', 'test', 'train']:
         txt2num(fld+'/' + name, fld+'/vocab.txt')
+
+
+def build_ngram(fld, n):
+    top_ngram(fld, 'positive.txt', n)
+    top_ngram(fld, 'negative.txt', n)
+    combine_vocab(fld + '/positive.txt.%igram'%n, fld + '/negative.txt.%igram'%n, fld + '/%igram.txt'%n)
+
+
+
+def combine_vocab(path_a, path_b, path_out):
+    aa = [line.strip('\n') for line in open(path_a, encoding='utf-8')]
+    print(len(aa))
+    bb = [line.strip('\n') for line in open(path_b, encoding='utf-8')]
+    print(len(bb))
+    union = dict()
+    for i, a in enumerate(aa):
+        union[a] = i
+    for i, b in enumerate(bb):
+        if b in union:
+            union[b] = min(i, union[b])
+        else:
+            union[b] = i
+    print(len(union))
+    pq = queue.PriorityQueue()
+    for k in union:
+        pq.put((union[k], k))
+    vocab = []
+    while not pq.empty():
+        _, k = pq.get()
+        vocab.append(k)
+    with open(path_out, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(vocab))
