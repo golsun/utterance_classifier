@@ -7,3 +7,4 @@ scored/
 data/
 Makefile
 src/temp.py
+src/reddit_img.py
