@@ -355,48 +355,4 @@ def combine_vocab(path_a, path_b, path_out):
 
 
 
-def extract_multi_ref(fld, fname, min_n_ref, max_n_ref=None):
-
-    path_in = fld + '/' + fname
-    fld_out = fld + '/ref_%i'%min_n_ref
-    path_out = fld_out + '/' + fname
-    makedirs(fld_out)
-    open(path_out, 'w')
-    print(path_out)
-
-    m_src = 0
-    n_src = 0
-    m_tgt = 0
-    n_tgt = 0
-    prev = ''
-    refs = set()
-
-    for line in open(path_in, encoding='utf-8'):
-        line = line.strip('\n')
-        n_tgt += 1
-        if n_tgt%1e5 == 0:
-            print('[ %s ] processed %.3fM lines, selected %.3fM'%(fname, n_tgt/1e6, m_tgt/1e6))
-        src, tgt = line.split('\t')
-
-        if src != prev:
-            n_src += 1
-            if len(refs) >= min_n_ref:
-                m_src += 1
-                m_tgt += len(refs)
-                lines = [(prev + '\t' + ref) for ref in refs]
-                with open(path_out, 'a', encoding='utf-8') as f:
-                    f.write('\n'.join(lines) + '\n')
-            refs = set()
-            prev = src
-        if max_n_ref is None or len(refs) < max_n_ref:
-            refs.add(tgt)
-
-    if len(lines) >= min_n_ref:
-        m_tgt += len(refs)
-        lines = [(prev + '\t' + ref) for ref in refs]
-        with open(path_out, 'a', encoding='utf-8') as f:
-            f.write('\n'.join(lines))
-
-    with open(fld_out + '/stat.tsv', 'a') as f:
-        f.write('\t'.join(map(str, [fname, m_src, n_src, m_tgt, n_tgt])) + '\n')
 
