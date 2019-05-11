@@ -5,7 +5,7 @@ import pickle
 
 class ClassifierNgram:
 
-    def __init__(self, fld, ngram, include_punc=False):
+    def __init__(self, fld, ngram, include_punc=False, model_class='logistic'):
         self.fld = fld
         self.ngram2ix = dict()
         self.ngram = ngram
@@ -21,8 +21,12 @@ class ClassifierNgram:
             assert(self.ngram == len(ngram.split()))
         self.vocab_size = i + 1
         print('loaded %i %igram'%(self.vocab_size, self.ngram))
-        #self.model = LogisticRegression(solver='sag')#, max_iter=10)
-        self.model = linear_model.SGDClassifier(loss='log', random_state=9, max_iter=1, tol=1e-3)
+        self.model_class = model_class
+        if self.model_class == 'logistic':
+            self.model = linear_model.SGDClassifier(loss='logistic', random_state=9, max_iter=1, tol=1e-3)
+        elif self.model_class == 'linear':
+            self.model = linear_model.LinearRegression()
+        
 
 
     def get_Xy(self, f, batch):
@@ -61,13 +65,21 @@ class ClassifierNgram:
             if X.shape[0] == 0:
                 break
             print('fitting...')
-            self.model = self.model.partial_fit(X, y, classes=np.array([0,1]))
+            if self.model_class == 'logistic':
+                self.model = self.model.partial_fit(X, y, classes=np.array([0,1]))
+            else:
+                self.model = self.model.fit(X, y)
+
             n_trained += len(y)
 
-            y_pred = self.model.predict_proba(X_vali)
-            acc = sum([int(y_pred[i,1]>0.5) == y_vali[i] for i in range(len(y_vali))])/len(y_vali)
-            log_loss = metrics.log_loss(y_vali, y_pred)
-            print('trained %.1f k, log_loss = %.3f, acc = %3f'%(n_trained/1000, log_loss, acc))
+            if self.model_class == 'linear':
+                y_pred = self.model.predict(X_vali)
+                acc = sum([int(y_pred[i]>0.5) == int(y_vali[i]>0.5) for i in range(len(y_vali))])/len(y_vali)
+            else:
+                y_pred = self.model.predict_proba(X_vali)
+                acc = sum([int(y_pred[i,1]>0.5) == y_vali[i] for i in range(len(y_vali))])/len(y_vali)
+                log_loss = metrics.log_loss(y_vali, y_pred)
+                print('trained %.1f k, log_loss = %.3f, acc = %3f'%(n_trained/1000, log_loss, acc))
 
             if acc > max_vali_acc:
                 max_vali_acc = acc
@@ -131,3 +143,90 @@ class ClassifierNgramEnsemble:
         score = self.predict(txts)
         acc = sum([int(score[i]>0.5) == y_vali[i] for i in range(len(y_vali))])/len(y_vali)
         print('ensemble acc = %.4f'%acc)
+
+
+
+class Classifier1gramCount:
+    def __init__(self, fld):
+        self.fld = fld
+
+    def fit(self, min_freq=60):
+        scores = dict()
+        for line in open(self.fld + '/all.txt', encoding='utf-8'):
+            cells = line.strip('\n').split('\t')
+            if len(cells) != 2:
+                print(cells)
+                exit()
+            txt, score = cells
+            for w in set(txt.strip().split()):
+                if is_word(w):
+                    if w not in scores:
+                        scores[w] = []
+                    scores[w].append(float(score))
+
+        lines = ['\t'.join(['word', 'avg', 'se', 'count'])]
+        for w in scores:
+            count = len(scores[w])
+            if count < min_freq:
+                continue
+            avg = np.mean(scores[w])
+            se = np.std(scores[w])/np.sqrt(count)
+            lines.append('\t'.join([w, '%.4f'%avg, '%.4f'%se, '%i'%count]))
+
+        with open(self.fld + '/count.tsv', 'w', encoding='utf-8') as f:
+            f.write('\n'.join(lines))
+
+    def load(self):
+        self.coef = dict()
+        f = open(self.fld + '/count.tsv', encoding='utf-8')
+        header = f.readline()
+        for line in f:
+            w, avg = line.strip('\n').split('\t')[:2]
+            self.coef[w] = float(avg)
+
+    def corpus_score(self, txts, crit_coef=0.5):
+        scores = []
+        keywords = set()
+        for w in self.coef:
+            if self.coef[w] > crit_coef:
+                keywords.add(w)
+        for txt in txts:
+            words = set()
+            for w in txt.strip().split():
+                if is_word(w):
+                    words.add(w)
+            joint = words & keywords
+            scores.append(len(joint)/len(words))
+        return np.mean(scores)
+
+
+    def test(self, crit_coef=0.5):
+        import matplotlib.pyplot as plt
+
+        txts = []
+        labels = []
+        for line in open(self.fld + '/sorted_avg.tsv', encoding='utf-8'):
+            txt, label = line.strip('\n').split('\t')
+            txts.append(txt)
+            labels.append(float(label))
+
+        i0 = 0
+        human = []
+        pred = []
+        while True:
+            i1 = i0 + 100
+            if i1 >= len(txts):
+                break
+            human.append(np.mean(labels[i0:i1]))
+            pred.append(self.corpus_score(txts[i0:i1], crit_coef=crit_coef))
+            i0 = i1
+
+        plt.plot(human, pred, '.')
+        plt.xlabel('human')
+        plt.xlabel('metric (ratio of keywords)')
+        plt.title('corr = %.4f'%np.corrcoef(human, pred)[0][1])
+        plt.savefig(self.fld + '/test_corr.png')
+
+                    
+
+
