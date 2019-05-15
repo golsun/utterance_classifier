@@ -150,9 +150,11 @@ class Classifier1gramCount:
     def __init__(self, fld):
         self.fld = fld
 
-    def fit(self, min_freq=60):
+    def fit(self, min_freq=60, max_n=1e5):
         scores = dict()
+        n = 0
         for line in open(self.fld + '/all.txt', encoding='utf-8'):
+            n += 1
             cells = line.strip('\n').split('\t')
             if len(cells) != 2:
                 print(cells)
@@ -163,6 +165,9 @@ class Classifier1gramCount:
                     if w not in scores:
                         scores[w] = []
                     scores[w].append(float(score))
+            if n == max_n:
+                break
+
 
         lines = ['\t'.join(['word', 'avg', 'se', 'count'])]
         for w in scores:
@@ -184,12 +189,15 @@ class Classifier1gramCount:
             w, avg = line.strip('\n').split('\t')[:2]
             self.coef[w] = float(avg)
 
-    def corpus_score(self, txts, crit_coef=0.5):
+    def corpus_score(self, txts, kw=100):
         scores = []
-        keywords = set()
+        coef_w = []
         for w in self.coef:
-            if self.coef[w] > crit_coef:
-                keywords.add(w)
+            coef_w.append((self.coef[w], w))
+        coef_w = sorted(coef_w, reverse=True)[:kw]
+        print('last:',coef_w[-1])
+        keywords = set([w for _, w in coef_w])
+
         for txt in txts:
             words = set()
             for w in txt.strip().split():
@@ -200,7 +208,7 @@ class Classifier1gramCount:
         return np.mean(scores)
 
 
-    def test(self, crit_coef=0.5):
+    def test(self, kw=100):
         import matplotlib.pyplot as plt
 
         txts = []
@@ -218,14 +226,14 @@ class Classifier1gramCount:
             if i1 >= len(txts):
                 break
             human.append(np.mean(labels[i0:i1]))
-            pred.append(self.corpus_score(txts[i0:i1], crit_coef=crit_coef))
+            pred.append(self.corpus_score(txts[i0:i1], kw=kw))
             i0 = i1
 
         plt.plot(human, pred, '.')
         plt.xlabel('human')
         plt.xlabel('metric (ratio of keywords)')
         plt.title('corr = %.4f'%np.corrcoef(human, pred)[0][1])
-        plt.savefig(self.fld + '/test_corr.png')
+        plt.savefig(self.fld + '/test_corr_kw%i.png'%kw)
 
                     
 
