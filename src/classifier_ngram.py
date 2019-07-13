@@ -198,6 +198,9 @@ class Classifier1gramCount:
         print('last:',coef_w[-1])
         keywords = set([w for _, w in coef_w])
 
+        #total_joint = 0
+        #total = 0
+
         for txt in txts:
             words = set()
             for w in txt.strip().split():
@@ -205,7 +208,10 @@ class Classifier1gramCount:
                     words.add(w)
             joint = words & keywords
             scores.append(len(joint)/len(words))
-        return np.mean(scores)
+            #total_joint += len(joint)
+            #total += len(words)
+        return np.mean(scores), np.std(scores)/np.sqrt(len(scores))
+        #return total_joint/total
 
 
     def test(self, kw=100):
