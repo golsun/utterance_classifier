@@ -2,6 +2,7 @@ from util import *
 from sklearn import linear_model
 from sklearn import metrics 
 import pickle
+from data_prepare import top_ngram
 
 class ClassifierNgram:
 
@@ -23,7 +24,7 @@ class ClassifierNgram:
         print('loaded %i %igram'%(self.vocab_size, self.ngram))
         self.model_class = model_class
         if self.model_class == 'logistic':
-            self.model = linear_model.SGDClassifier(loss='logistic', random_state=9, max_iter=1, tol=1e-3)
+            self.model = linear_model.SGDClassifier(loss='log', random_state=9, max_iter=1, tol=1e-3)
         elif self.model_class == 'linear':
             self.model = linear_model.LinearRegression()
         
@@ -238,3 +239,9 @@ class Classifier1gramCount:
                     
 
 
+if __name__ == '__main__':
+    n = 4
+    fld = 'd:/data/classifier/base10M_vs_vHolmes120k'
+    top_ngram(fld, 'train.txt', n, include_punc=False)
+    clf = ClassifierNgram(fld, n, model_class='logistic')
+    clf.fit(10000)

@@ -296,7 +296,7 @@ def top_ngram(fld, in_fname, n, min_freq=20, max_n=10000, include_punc=False):
             break
         final.append(ngram)
     
-    with open(fld + '/' + in_fname + '.%igram'%n, 'w', encoding='utf-8') as f:
+    with open(fld + '/%igram.txt'%n, 'w', encoding='utf-8') as f:
         f.write('\n'.join(final))
 
 

@@ -86,9 +86,10 @@ def is_word(token):
 
 	
 def txt2ww(txt, include_punc):
-    ww = [SOS_token]
-    for w in txt.split():
-        if include_punc or is_word(w):
-            ww.append(w)
-    ww.append(EOS_token)
-    return ww
+	txt = txt.replace(SOS_token,'').replace(EOS_token,'')
+	ww = [SOS_token]
+	for w in txt.split():
+		if include_punc or is_word(w):
+			ww.append(w)
+	ww.append(EOS_token)
+	return ww
