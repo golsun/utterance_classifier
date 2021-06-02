@@ -1,5 +1,3 @@
-(this is a private repo for MSR AI NLP team)
-
 This repo provides the code to extract "dialogs" from Reddit data, and score them on how "Twitter-like" they are. Twitter data is usually more causual while Reddit data usually contains more specific contents.
 ## Reddit data
 As we don't own the Reddit data, we only provide the script here to process the data.
